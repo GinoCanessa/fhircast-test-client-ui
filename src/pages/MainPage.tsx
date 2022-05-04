@@ -68,14 +68,15 @@ export default function MainPage(props: MainPageProps) {
       localStorage.setItem('supportedEvents', JSON.stringify(supportedEvents));
     }
 
+    setWebsocketUrl(wsUrl);
+    setReceivedConnects([]);
+    setReceivedEvents([]);
 
     _clientHostWebSocketRef.current = new WebSocket(wsUrl);
     _clientHostWebSocketRef.current.onmessage = clientHostMessageHandler;
     _clientHostWebSocketRef.current.onerror = handleClientHostWebSocketError;
     _clientHostWebSocketRef.current.onclose = handleClientHostWebSocketClose;
-    setWebsocketUrl(wsUrl);
-    setReceivedConnects([]);
-    setReceivedEvents([]);
+
     setConnected(true);
   }
   
@@ -90,10 +91,15 @@ export default function MainPage(props: MainPageProps) {
     
     if (obj['id']) {
       console.log('Received event message', obj);
+      respondToWsEvent(obj as FHIRcastEventTemplate);      
       let updated:FHIRcastEventTemplate[] = [obj, ...receivedEvents];
       console.log('Events...', updated);
       setReceivedEvents(updated);
     }
+  }
+
+  function respondToWsEvent(event:FHIRcastEventTemplate) {
+    _clientHostWebSocketRef.current?.send(JSON.stringify({id:event.id, status:'200'}));
   }
   
   function handleClientHostWebSocketError(event: Event) {
