@@ -1,4 +1,4 @@
-import React, { ReactFragment, useState } from 'react';
+import React, { ReactElement, ReactFragment, useState } from 'react';
 
 import { AppComponentProps } from '../models/AppComponentProps';
 
@@ -81,8 +81,8 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
     props.setSupportedEvents(updatedEvents);
   }
 
-  function getEventControls():ReactFragment[] {
-    let controls:ReactFragment[] = [];
+  function getEventControls():ReactElement[] {
+    let controls:ReactElement[] = [];
     
     if (props.supportedEvents === {}) {
       return controls;

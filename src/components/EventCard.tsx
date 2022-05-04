@@ -27,7 +27,7 @@ export default function EventCard(props:EventCardProps) {
     <Card>
       <CardContent>
         <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
-            ID: {props.event.id}, received at: {props.event.timestamp}
+            {`ID: ${props.event.id}, received at: ${props.event.timestamp}`}
         </Typography>
         <Typography variant="h5" component="div">
           {props.event.event['hub.event']}
