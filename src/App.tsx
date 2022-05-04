@@ -10,6 +10,7 @@ import './App.css';
 
 import MainPage from './pages/MainPage';
 import AppHeader from './components/AppHeader';
+import { StorageHelper } from './util/StorageHelper';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -21,7 +22,19 @@ export default function App() {
   });
 
   function toggleMode() {
-    setDarkMode(!darkMode);
+    if (darkMode) {
+      if (StorageHelper.isLocalStorageAvailable) {
+        localStorage.setItem('useDarkMode', 'false');
+      }
+      setDarkMode(false);
+
+      return;
+    }
+
+    if (StorageHelper.isLocalStorageAvailable) {
+      localStorage.setItem('useDarkMode', 'true');
+    }
+    setDarkMode(true);
   }
 
   return (

@@ -1,4 +1,3 @@
-import { fhir } from 'fhir-typescript-sdk-dev';
 
 export interface AppComponentProps {
   useDarkMode: boolean,

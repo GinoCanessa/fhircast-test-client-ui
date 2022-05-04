@@ -1,11 +1,8 @@
 import React, { ReactFragment, useEffect, useRef, useState } from 'react';
 
 import { AppComponentProps } from '../models/AppComponentProps';
-import { fhir, valueSetEnums as fhirEnums } from 'fhir-typescript-sdk-dev';
 
 import { 
-  Accordion,
-  Box,
   Button, 
   Card,
   Checkbox,
@@ -14,23 +11,10 @@ import {
   FormGroup, 
   FormLabel, 
   Grid, 
-  IconButton, 
-  InputLabel, 
-  List, 
-  ListItemButton, 
-  ListItemText, 
-  ListSubheader, 
-  MenuItem, 
-  Select, 
-  SelectChangeEvent, 
   Stack, 
   TextField, 
-  Tooltip, 
   Typography 
 } from '@mui/material';
-import { 
-  DriveFolderUpload as DriveFolderUploadIcon,
-} from '@mui/icons-material';
 import { WellknownFhircast } from '../models/FHIRcastWellknown';
 
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -38,24 +22,29 @@ import { atomOneDark, atomOneLight } from 'react-syntax-highlighter/dist/esm/sty
 import { WebsocketSubscriptionResponse } from '../models/WebsocketSubscriptionResponse';
 
 
-
 export interface HubConfigPaneProps extends AppComponentProps {
   connectWebsocket:(wsUrl:string) => void;
+  supportedEvents:object;
+  setSupportedEvents:(events:object) => void;
+  hubUrl:string;
+  setHubUrl:(url:string) => void;
+  hubTopic:string;
+  setHubTopic:(topic:string) => void;
+  leaseSeconds:number;
+  setLeaseSeconds:(seconds:number) => void;
+  subscriberName:string;
+  setSubscriberName:(name:string) => void;
+  bearerToken:string;
+  setBearerToken:(token:string) => void;
+  connected:boolean;
+  websocketUrl:string;
 }
 
 export default function HubConfigPane(props:HubConfigPaneProps) {
-  const [scopes, setScopes] = useState<object>({});
-  const [hubUrl, setHubUrl] = useState<string>('http://212.187.24.92:9412/api/sync/fhircast/');
   const [wellKnownDisplay, setWellKnownDisplay] = useState<string>('');
 
-  const [hubTopic, setHubTopic] = useState<string>('Topic1');
-  const [leaseSeconds, setLeaseSeconds] = useState<number>(30 * 60);
-  const [subscriberName, setSubscriberName] = useState<string>('FHIRcast Test Client');
-
-  const [bearerToken, setBearerToken] = useState<string>('');
-
   async function loadWellKnownConfig() {
-    if (!hubUrl) {
+    if (!props.hubUrl) {
       props.addMessage('Cannot load well-known without a hub url!');
       return;
     }
@@ -63,7 +52,7 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
     try {
       let url:string = new URL(
         '.well-known/fhircast-configuration',
-        hubUrl).toString();
+        (props.hubUrl.endsWith('/') ? props.hubUrl : (props.hubUrl + '/'))).toString();
   
       let response:Response = await fetch(url, {
         method: 'GET',
@@ -72,13 +61,13 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
       let body:string = await response.text();
       let typed:WellknownFhircast = JSON.parse(body);
 
-      let updatedScopes:object = {...scopes};
+      let updatedEvents:object = {};
 
       typed.eventsSupported.forEach((event:string) => {
-        (updatedScopes as any)[event] = false;
+        (updatedEvents as any)[event] = (props.supportedEvents as any)[event] ?? false;
       });
 
-      setScopes(updatedScopes);
+      props.setSupportedEvents(updatedEvents);
       setWellKnownDisplay(JSON.stringify(typed, null, 2));
 
     } catch (err) {
@@ -87,25 +76,25 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
     }
   }
 
-  function handleScopeCheckChange(event: React.ChangeEvent<HTMLInputElement>) {
-    let updatedScopes:object = {...scopes};
-    (updatedScopes as any)[event.target.name] = !(scopes as any)[event.target.name];
-    setScopes(updatedScopes);
+  function handleEventCheckChange(event: React.ChangeEvent<HTMLInputElement>) {
+    let updatedEvents:object = {...props.supportedEvents};
+    (updatedEvents as any)[event.target.name] = !(props.supportedEvents as any)[event.target.name];
+    props.setSupportedEvents(updatedEvents);
   }
 
-  function getScopeControls():ReactFragment[] {
+  function getEventControls():ReactFragment[] {
     let controls:ReactFragment[] = [];
     
-    if (scopes === {}) {
+    if (props.supportedEvents === {}) {
       return controls;
     }
 
-    Object.entries(scopes).forEach(([event, checked]) => {
+    Object.entries(props.supportedEvents).forEach(([event, checked]) => {
       controls.push(
         <Grid item xs={2} key={`grid-${event}`} >
           <FormControlLabel
             key={`control-${event}`}
-            control={<Checkbox checked={checked} onChange={handleScopeCheckChange} name={event} />}
+            control={<Checkbox checked={checked} onChange={handleEventCheckChange} name={event} />}
             label={event}
           />
         </Grid>
@@ -116,42 +105,79 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
   }
 
   function getSelectedEventComponent():string {
-    let events:string = '';
+    let selected:string = '';
 
-    Object.entries(scopes).forEach(([event, checked]) => {
+    Object.entries(props.supportedEvents).forEach(([event, checked]) => {
       if (checked) {
-        events += (events ? ',' : '') + event;
+        selected += (selected ? ',' : '') + event;
       }
     });
 
-    if (events === '') {
+    if (selected === '') {
       return '';
     }
 
-    return `&hub.events=${encodeURIComponent(events)}`;
+    return `&hub.events=${encodeURIComponent(selected)}`;
   }
 
-  async function subscriptionRequest() {
+  function toggleConnection() {
+    if (props.connected) {
+      requestUnsubscribe();
+    } else {
+      requestSubscribe();
+    }
+  }
+
+  async function requestUnsubscribe() {
     try {
-      let url:string = new URL(hubUrl).toString();
+      let url:string = new URL(props.hubUrl).toString();
   
       let headers: Headers = new Headers();
       headers.append('Content-Type', 'application/x-www-form-urlencoded');
       headers.append('Accept', 'application/json');
-      if ((bearerToken) && (bearerToken !== '')) {
-        headers.append('Authorization', `Bearer ${bearerToken}`);
+      if ((props.bearerToken) && (props.bearerToken !== '')) {
+        headers.append('Authorization', `Bearer ${props.bearerToken}`);
+      }
+
+      let requestBody:string = 'hub.channel.type=websocket&hub.mode=unsubscribe';
+      requestBody += `&hub.topic=${encodeURIComponent(props.hubTopic)}`;
+      
+      if (props.websocketUrl) {
+        requestBody += `&hub.channel.endpoint=${encodeURIComponent(props.websocketUrl)}`;
+      }
+
+      let response:Response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: requestBody,
+      });
+    } catch (err) {
+      console.log('Caught error', err);
+      props.addMessage(`Failed to request unsubscribe: ${err}`);
+    }
+  }
+
+  async function requestSubscribe() {
+    try {
+      let url:string = new URL(props.hubUrl).toString();
+  
+      let headers: Headers = new Headers();
+      headers.append('Content-Type', 'application/x-www-form-urlencoded');
+      headers.append('Accept', 'application/json');
+      if ((props.bearerToken) && (props.bearerToken !== '')) {
+        headers.append('Authorization', `Bearer ${props.bearerToken}`);
       }
 
       let requestBody:string = 'hub.channel.type=websocket&hub.mode=subscribe';
-      requestBody += `&hub.topic=${encodeURIComponent(hubTopic)}`;
+      requestBody += `&hub.topic=${encodeURIComponent(props.hubTopic)}`;
       requestBody += getSelectedEventComponent();
       
-      if (leaseSeconds > 0) {
-        requestBody += '&hub.lease_seconds=' + leaseSeconds.toString();
+      if (props.leaseSeconds > 0) {
+        requestBody += '&hub.lease_seconds=' + props.leaseSeconds.toString();
       }
 
-      if (subscriberName) {
-        requestBody += `&subscriber.name=${encodeURIComponent(subscriberName)}`;
+      if (props.subscriberName) {
+        requestBody += `&subscriber.name=${encodeURIComponent(props.subscriberName)}`;
       }
 
       let response:Response = await fetch(url, {
@@ -165,30 +191,32 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
 
       console.log('Connection will be at', typed['hub.channel.endpoint']);
 
+      props.connectWebsocket(typed['hub.channel.endpoint']);
+
     } catch (err) {
       console.log('Caught error', err);
-      props.addMessage(`Failed to request subscription: ${err}`);
+      props.addMessage(`Failed to request subscribe: ${err}`);
     }
   }
 
   const handleHubUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setHubUrl(event.target.value);
+    props.setHubUrl(event.target.value);
   };
 
   const handleHubTopicChange  = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setHubTopic(event.target.value);
+    props.setHubTopic(event.target.value);
   };
 
   const handleLeaseSecondsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setLeaseSeconds(Number.parseInt(event.target.value));
+    props.setLeaseSeconds(Number.parseInt(event.target.value));
   };
 
   const handleSubscriberNameChange  = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSubscriberName(event.target.value);
+    props.setSubscriberName(event.target.value);
   };
 
   const handleBearerTokenChange  = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setBearerToken(event.target.value);
+    props.setBearerToken(event.target.value);
   };
 
   return (
@@ -196,7 +224,7 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
       <Stack direction='column' spacing={2}>
         <TextField 
           key='hub-url'
-          value={hubUrl} 
+          value={props.hubUrl} 
           onChange={handleHubUrlChange} 
           required 
           fullWidth 
@@ -215,14 +243,14 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
           <FormLabel component='legend'>Events</FormLabel>
             <FormGroup>
             <Grid container spacing={2}>
-            { getScopeControls() }
+            { getEventControls() }
             </Grid>
           </FormGroup>
         </FormControl>
 
         <TextField 
           key='hub-topic'
-          value={hubTopic} 
+          value={props.hubTopic} 
           onChange={handleHubTopicChange} 
           required 
           fullWidth 
@@ -234,7 +262,7 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
           
         <TextField 
           key='lease-seconds'
-          value={leaseSeconds.toString()} 
+          value={props.leaseSeconds.toString()} 
           onChange={handleLeaseSecondsChange} 
           required 
           fullWidth 
@@ -246,7 +274,7 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
 
         <TextField 
           key='subscriber-name'
-          value={subscriberName} 
+          value={props.subscriberName} 
           onChange={handleSubscriberNameChange} 
           fullWidth 
           variant='filled'
@@ -257,7 +285,7 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
 
         <TextField 
           key='bearer-token'
-          value={bearerToken} 
+          value={props.bearerToken} 
           onChange={handleBearerTokenChange} 
           fullWidth 
           variant='filled'
@@ -265,12 +293,11 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
           id='bearer-token' 
           helperText='An optional Bearer Token to include with Subscription Requests.'
           />
-
         <Button
           key='connect-websocket'
-          onClick={() => subscriptionRequest()}
+          onClick={() => toggleConnection()}
           >
-          Connect
+          {props.connected ? 'Disconnect' : 'Connect'}
         </Button>
 
         <SyntaxHighlighter
