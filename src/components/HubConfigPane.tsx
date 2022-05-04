@@ -1,4 +1,5 @@
-import React, { ReactElement, ReactFragment, useState } from 'react';
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, { ReactElement, useState } from 'react';
 
 import { AppComponentProps } from '../models/AppComponentProps';
 
@@ -145,7 +146,7 @@ export default function HubConfigPane(props:HubConfigPaneProps) {
         requestBody += `&hub.channel.endpoint=${encodeURIComponent(props.websocketUrl)}`;
       }
 
-      let response:Response = await fetch(url, {
+      await fetch(url, {
         method: 'POST',
         headers: headers,
         body: requestBody,
