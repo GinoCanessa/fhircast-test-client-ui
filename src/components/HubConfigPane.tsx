@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { ReactElement, useState } from 'react';
 
 import { AppComponentProps } from '../models/AppComponentProps';
