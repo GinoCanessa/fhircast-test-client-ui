@@ -5,10 +5,8 @@ import {
   Tab, 
   Tabs,
   Toolbar,
-  Typography 
 } from '@mui/material';
 
-import { InternalMessage } from '../models/InternalMessage';
 import HubConfigPane from '../components/HubConfigPane';
 import { FHIRcastEventTemplate } from '../models/FHIRcastEventTemplate';
 import { FHIRcastWsConnectMessage } from '../models/FHIRcastWsConnectMessage';
@@ -23,7 +21,6 @@ export interface MainPageProps {
 export default function MainPage(props: MainPageProps) {
 
   const _clientHostWebSocketRef = useRef<WebSocket | null>(null);
-  const _internalMessageMap = useRef<Map<BigInt, InternalMessage>>(new Map());
 
   const [websocketUrl, setWebsocketUrl] = useState<string>('');
   const [connected, setConnected] = useState<boolean>(false);

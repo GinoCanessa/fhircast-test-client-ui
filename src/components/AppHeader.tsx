@@ -9,17 +9,14 @@ import {
   ToggleButton,
   Toolbar, 
   Typography,
-  Button,
   Tooltip,
   Stack,
 } from '@mui/material';
 
 import { 
-  List as ListIcon,
   Settings as SettingsIcon,
   LightMode as LightModeIcon,
   DarkMode as DarkModeIcon,
-  DriveFolderUpload as DriveFolderUploadIcon,
 } from '@mui/icons-material';
 
 export interface AppHeaderProps {

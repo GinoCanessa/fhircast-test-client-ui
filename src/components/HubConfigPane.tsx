@@ -1,4 +1,4 @@
-import React, { ReactFragment, useEffect, useRef, useState } from 'react';
+import React, { ReactFragment, useState } from 'react';
 
 import { AppComponentProps } from '../models/AppComponentProps';
 
@@ -13,7 +13,6 @@ import {
   Grid, 
   Stack, 
   TextField, 
-  Typography 
 } from '@mui/material';
 import { WellknownFhircast } from '../models/FHIRcastWellknown';
 

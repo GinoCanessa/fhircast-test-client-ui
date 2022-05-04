@@ -1,26 +1,13 @@
-import React, { ReactFragment, useEffect, useRef, useState } from 'react';
-
 import { AppComponentProps } from '../models/AppComponentProps';
 
 import { 
   Accordion,
   AccordionDetails,
   AccordionSummary,
-  Button, 
   Card,
   CardContent,
-  Checkbox,
-  FormControl, 
-  FormControlLabel, 
-  FormGroup, 
-  FormLabel, 
-  Grid, 
-  Stack, 
-  TextField, 
   Typography 
 } from '@mui/material';
-
-import { DomainResource } from 'fhir/r4';
 
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark, atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs'
